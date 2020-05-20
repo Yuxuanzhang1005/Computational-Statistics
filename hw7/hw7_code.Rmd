@@ -1,0 +1,76 @@
+---
+title: "STAT525 HW7"
+author: "Yuxuan Zhang"
+date: "3/28/2020"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### 1
+Consider the one-dimensional Ising model that we discussed in class. Let $x=(x_1, x_2, ... x_d)$, where $x_i$ is either +1, or -1. The target distribution is 
+$$\pi(x) \propto exp\{\mu \sum_{i=1}^{d-1} x_ix_{i+1}\}$$
+Let $\mu=2, d=18$
+
+$$\pi(x_i|x_1^{(t+1)},...,x_{i-1}^{(t+1)},x_{i+1}^{(t)},...,x_{d}^{(t)})\propto exp\{\mu(x_{i-1}^{(t+1)}+x_{i+1}^{(t)})x_i\}$$ 
+```{r}
+mu = 2 
+d = 18
+n = 10000
+x = matrix(0, nrow = n, ncol = d)
+x1 = runif(d)
+x[1, ] = ifelse(x1>0.5,1,-1)
+for (i in 2:n) {
+  for (j in 1:d) {
+    if (j == 1) {
+      x[i, ]= x[i-1,]
+      p = exp(mu*1*x[i,2])/(exp(mu*1*x[i,2]) + exp(-mu*1*x[i,2]))
+    } else if (j == d) {
+      p = exp(mu*x[i,d-1])/(exp(mu*1*x[i,d-1]) + exp(-mu*1*x[i,d-1]))
+     
+    } else {
+      p = exp(mu*x[i,j-1]+mu*x[i,j+1])/(exp(mu*x[i,j-1]+mu*x[i,j+1])+ exp(-mu*x[i,j-1]-mu*x[i,j+1]))
+    }
+    x[i,j] = ifelse(rbinom(1,size=1, p)==1, 1, -1)
+  }
+  
+}
+m = apply(x, 1, sum)
+hist(m)
+```
+
+
+### 2
+Design a Gibbs sampling algorithm to generate samples approximately from the target distribution $p(\mu, \tau | y_1,..,y6)$. Attach your code and results.
+
+$$p(\mu | \tau, y_1,..,y6) \propto N(\frac{\tau\sum y_i}{n\tau + w}, \frac{1}{n\tau+w})$$
+$$p(\tau | \mu, y_1,..,y6) \propto Gamma(n/2+a, \frac{1}{\sum(y_i-\mu)^2/2+1/b})$$
+
+```{r}
+y = c(1.8, 3.3, 0.4, 2.5, 2.6, 2.3)
+w = 0.04
+a = 2
+b = 0.5
+m = 10000
+n = 6
+para = matrix(0, nrow = m, ncol = 2)
+para[1,1] = rnorm(1, mean = 0, sd = sqrt(1/w))
+para[1,2] = rgamma(1, shape = a, scale = b)
+# first column is mu, second column is tau
+for (i in 2:m) {
+  para[i, ] = para[i-1, ]
+  for (j in 1:2) {
+    if (j == 1) {
+      tau = para[i,2]
+      para[i,1] = rnorm(1,mean = tau*sum(y)/(w+tau*n),sd =sqrt(1/(w+tau*n)))
+    } else {
+      mu = para[i,1]
+      para[i,2] = rgamma(1, shape = n/2+a, scale = 1/(sum((y-mu)^2)/2+1/b))
+    }
+  }
+}
+# posterior mean os mu and tau
+apply(para, 2, mean)
+```

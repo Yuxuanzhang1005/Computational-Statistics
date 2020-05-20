@@ -1,0 +1,101 @@
+---
+title: "STAT525 HW2"
+author: "Yuxuan Zhang"
+date: "2/1/2020"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### 1
+Design a rejection sampling algorithm for generating samples from a distribution with the following pdf:
+$$\pi(x) = \frac{3}{2}x^3 +\frac{11}{8}x^2+\frac{1}{6}x+\frac{1}{12}, 0\leq x\leq 1 $$
+$$\pi(x) \leq cg(x)$$
+$$g(x) = Uniform[0,1], c = \max_{[0,1]}\pi(x)= \pi(1) = \frac{25}{8}$$
+```{r}
+pi = function(x) {3/2*x^3 + 11/8*x^2 + 1/6*x + 1/12}
+c = 25/8
+i = 1
+sample = c(rep(0,1000))
+while (i <= 1000) {
+  x = runif(1)
+  u = runif(1)
+  if (u <= pi(x)/c) {
+    sample[i] = x
+    i = i + 1
+  }
+}
+# Estimate of E(x^2)
+mean(sample^2)
+# standard error of the estimate
+sqrt(var(sample^2)/1000)
+```
+
+### 2
+$$\pi(x)\propto \{[sin(8x)]^2 + 2[cos(3x)]^4 + 1]\}e^{-x}, 0\leq x \leq \infty$$
+$$\pi(x)\propto l(x),\quad  l(x) \leq cg(x)$$
+$$g(x) = e^{-x}, 0\leq x \leq \infty ; \quad c = \max([sin(8x)]^2 + 2[cos(3x)]^4 + 1) = 4$$
+$$u \leq \frac{l(x)}{cg(x)} = \frac{[sin(8x)]^2 + 2[cos(3x)]^4 + 1}{4}$$
+```{r}
+pi = function(x) {(sin(x)^2 + 2*cos(3*x)^4 + 1)}
+c = 4
+i = 1
+sample = c(rep(0,1000))
+while (i <= 1000) {
+  x = rexp(1)
+  u = runif(1)
+  if (u <= pi(x)/c) {
+    sample[i] = x
+    i = i + 1
+  }
+}
+# Estimate of the mean of \pi(x)
+mean(sample)
+# standard error of the estimate
+sqrt(var(sample)/1000)
+```
+### 3
+Let $X_1,...,X_n$ be i.i.d from $N(0,1)$ where $\theta$ is the unknown parameter. In Bayesian inference, we may put a Cauchy prior distribution on $\theta$ and Bayes estimate of $\theta$ is the mean of posterior distribution
+$$\pi(\theta|x_1,...x_n) \propto \frac{1}{\pi(1+\theta^2)}\prod_{i=1}^{n}\frac{1}{\sqrt{2\pi}}e^{-(x_i-\theta)^2/2}$$
+$$\pi(x)\propto l(x),\quad  l(x) \leq cg(x)$$
+\begin{equation}
+\begin{split}
+l(\theta) &= \frac{1}{\pi(1+\theta^2)}(2\pi)^{-5/2}exp(-\frac{1}{2}[\sum(x_i-\theta)^2]) \\ 
+     &= \frac{1}{\pi(1+\theta^2)}(2\pi)^{-5/2}exp(-\frac{1}{2}[\sum x_i^2+5\theta^2-2\theta\sum x_i]) \\
+     &= \frac{1}{\pi(1+\theta^2)}(2\pi)^{-5/2}exp(-\frac{1}{2}[5(\theta^2-\frac{2\sum x_i}{5}\theta + \frac{\sum x_i^2}{5})]) \\
+     &= \frac{1}{\pi(1+\theta^2)}(2\pi)^{-5/2}exp(-\frac{5}{2}[(\theta-\frac{\sum x_i}{5})^2 + \frac{\sum x_i^2}{5} - (\frac{\sum x_i}{5})^2]) \\
+     &\leq \frac{1}{\pi}\frac{1}{\sqrt{5}} \frac{\sqrt{5}}{\sqrt{2\pi}}exp(-\frac{5}{2}(\theta-\frac{\sum x_i}{5})^2) \frac{1}{4\pi^2}exp(-\frac{\sum x_i^2}{2} + \frac{(\sum x_i)^2}{10}) \\
+     &=\frac{1}{\sqrt{80}\pi^3}exp(-\frac{\sum x_i^2}{2} + \frac{(\sum x_i)^2}{10})N(\frac{\sum x_i}{5}, \frac{1}{5}) \\
+     &= cg(\theta)
+\end{split}
+\end{equation}
+
+Instrucmental distribution is $N(\frac{\sum x_i}{5}, \frac{1}{5})$
+
+$$\frac{\pi(\theta)}{cg(\theta)}=\frac{\frac{1}{\pi(1+\theta^2)}}{\frac{1}{\sqrt{80}\pi^3}exp(-\frac{\sum x_i^2}{2} + \frac{(\sum x_i)^2}{10})} = \frac{\pi^2\sqrt{80}}{(1+\theta^2)exp(-\frac{\sum x_i^2}{2} + \frac{(\sum x_i)^2}{10})}$$
+
+```{r}
+x = c(1.6, 0.6, -0.7, 1.1, 0.8)
+
+i = 1
+N = 0
+sample = c(rep(0,1000))
+while (i <= 1000) {
+  N = N + 1
+  theta = rnorm(1, mean=sum(x)/5, sd=sqrt(1/5))
+  if(runif(1) <= 1/(1+theta^2)){
+    sample[i] = theta
+    i=i+1
+  }
+}
+# the number of samples I need to generate from the instrumental distribution in order to have 1000 accepted samples.
+N
+# estimated acceptance of rate
+1000/N
+# the mean of pi(theta|X)
+mean(sample)
+# standard error of my estimate
+sqrt(var(sample)/1000)
+```

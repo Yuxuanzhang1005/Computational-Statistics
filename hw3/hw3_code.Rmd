@@ -1,0 +1,83 @@
+---
+title: "STAT525HW3"
+author: "Yuxuan Zhang"
+date: "2/8/2020"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### 1 
+Suppose X has a uniform distribution on [0,1] and we want to estimate $E[sin(\sqrt{x})]$. Design an importance sampling algorithm which will give an estimate with smaller standard error than the Naive Monte Carlo method based on the same number of samples. Give your estimate and the standard error your estimate for both algorithms. Attach your code and results.
+
+For Naive Monte Carlo method, draw samples $x$ from uniform distribution and then estimate the mean from $sin(\sqrt{x})$.
+
+For Importance Sampling method:
+
+$$E(sin(\sqrt{x})) = \int_0^1sin\sqrt{x}dx = \int_0^1 \frac{sin\sqrt{x}}{\sqrt{x}}\sqrt{x}dx$$
+$$g(x) = \frac{3}{2}\sqrt{x}, \quad w(x) = \frac{sin\sqrt{x}}{1.5\sqrt{x}}$$
+Draw m=1000 samples from $g(x)$, $h(x) = 1$,Estimate $\mu$ by
+$$\hat{\mu} = \frac{w^{(1)}h(x^{(1)})+...+w^{(m)}h(x^{(m)})}{m}$$
+```{r}
+n = 1000
+x = runif(n)
+# Naive Monte Carlo
+nmc_sample = sin(sqrt(x))
+mean(nmc_sample)
+sd(nmc_sample)/sqrt(n)
+# Importance Sampling
+u = rbeta(n, 1.5, 1)
+is_sample = sin(sqrt(u))/(1.5*sqrt(u))
+mean(is_sample)
+sd(is_sample)/sqrt(n)
+```
+
+As we can see, the standard error of importance sampling is smaller than naive monte carlo.
+
+### 2
+In problem 3 of Homework 2, how many samples(denote this number by N) do you need to generate from the instrumental distribution in order to have 1000 accepted samples from $\pi(\theta|x_1,...,x_5)$?
+
+N = 1480
+
+Describe your importance sampling algorithm and implement the importance sampling algorithm based on N samples. Give your estimate of the mean of $\pi(\theta|x_1,...,x_5)$ and the standard error of your estimate.
+
+Estimate $\mu = E_{\pi}(\theta)$
+
+$$\pi(\theta|x_1,...x_n) \propto l(x)= \frac{1}{\pi(1+\theta^2)}\prod_{i=1}^{n}\frac{1}{\sqrt{2\pi}}e^{-(x_i-\theta)^2/2}$$
+$$l(x) = \frac{1}{\sqrt{80}\pi^3(1+\theta^2)}exp(-\frac{\sum x_i^2}{2} + \frac{(\sum x_i)^2}{10})N(\frac{\sum x_i}{5}, \frac{1}{5})$$
+$$w = \frac{l(x)}{g(x)} =\frac{1}{\sqrt{80}\pi^3(1+\theta^2)}exp(-\frac{\sum x_i^2}{2} + \frac{(\sum x_i)^2}{10}), \quad g(\theta) = N(\bar{x}, 1/5)$$
+$$h(\theta) = \theta$$
+```{r}
+x = c(1.6, 0.6, -0.7, 1.1, 0.8)
+theta = rnorm(1480, mean = sum(x)/5, sd = sqrt(1/5))
+w = exp(-sum(x^2)/2+(sum(x))^2/10)/(sqrt(80)*3.141593^3*(1+theta^2))
+# the estimated mean
+mu = sum(w*theta)/sum(w)
+mu
+# standard error of my estimate
+hlg = w*theta
+(var(hlg)+mu^2*var(w)-2*mu*cov(hlg,w))/(1480*mean(w)^2)
+```
+
+Compare this standard error with the one you obtained in problem 3 of Homework 2.
+
+The standard error of importance sampling is 0.000117 which is much smaller than rejection sampling 0.01291261.
+
+### 3
+Use importance sampling to estimate $\sigma^2= E(x^2)$, where X has the density that is proportional to $e^{-x^8/2}, -\infty <x < \infty$. Implement your algorithm. Give your estimate and the standard error of your estimate based on 1000 samples.
+$$\pi(x) \propto l(x)=e^{-x^8/2}$$
+$$w^{(i)} = \frac{l(x^{(i)})}{g(x^{(i)})}$$
+$$g(x) = N(0,1), \quad w(x) = \frac{e^{-x^8/2}}{\frac{1}{\sqrt{2\pi}}e^{-x^2/2}}=\sqrt{2\pi}e^{-\frac{1}{2}(x^8-x^2)}$$
+$$\tilde\mu = \frac{w^{(1)}h(x^{(1)})+...+w^{(m)}h(x^{(m)})}{w^{(1)}+...+w^{(m)}}$$
+```{r}
+x = rnorm(1000, mean=0, sd=1)
+w = sqrt(2*3.141594)*exp(-x^8/2+x^2/2)
+# estimate of mean
+mu = sum(w*(x^2))/sum(w)
+mu
+# standard error of my estimate
+hlg = x^2*w
+(var(hlg)+mu^2*var(w)-2*mu*cov(hlg,w))/(1000*mean(w)^2)
+```
