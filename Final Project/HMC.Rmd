@@ -1,0 +1,109 @@
+---
+title: "525project"
+author: "Yuxuan Zhang"
+date: "5/3/2020"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library("mvtnorm")
+hybridMC = function(temp, e, N, mu, sigma, step=1) {
+  x = matrix(0, nrow = N, ncol = 2)
+  inv_sigma = solve(sigma)
+  #x[1,] = rnorm(2, mean=0, sd=1)
+  x[1,] = c(4,8)
+  for (i in 2:N){
+    x_t = as.matrix(x[i-1, ])
+    p_t = matrix(rnorm(2, mean=0, sd=1), ncol=1)
+    
+    x_old=x_t
+    p = p_t
+    for (j in 1:step){
+      p_half = p - e / 2 * (inv_sigma%*%x_old)
+      x_new = x_old + e*p_half
+      p_new = p_half - e / 2 * (inv_sigma %*% x_new)
+      x_old = x_new
+      p = p_new
+    }
+    #mean=mu,
+    A = exp((dmvnorm(t(x_t),sigma=sigma) + dmvnorm(t(p_t),sigma=diag(2)) - dmvnorm(t(x_new), sigma=sigma) - dmvnorm(t(p_new), sigma=diag(2))) / temp)
+    u=rnorm(1)
+    if (min(A,1) >= u) {
+      x[i, ] = t(x_new)
+    } else {
+      x[i, ] = x[i-1, ]  
+    }
+  }
+  
+  return (x)
+}
+```
+
+```{r}
+library(ggplot2)
+ex1 = hybridMC(temp=1,e=0.1, N=100000, mu=c(0,0), sigma=matrix(c(1,0.4,0.4,2), nrow=2),step=10)
+simu = as.data.frame(ex1)
+sp = ggplot(data=simu, aes(x=V1,y=V2)) + geom_point(color = "gray") + geom_density_2d()
+sp+labs(y= "x2", x = "x1",title = "Simulation of temperature=1,e=0.1,N=100000,step=10")
+```
+
+```{r}
+cov(ex1)
+```
+
+
+```{r}
+par(mfrow=c(2,2))
+temperature = c(0.1,0.5,1,5)
+Step = c(1, 5, 10,20) 
+for (k in 1:4){
+  ex = hybridMC(temp=temperature[k],e=0.05, N=50, mu=c(0,0), sigma=matrix(c(1,0.4,0.4,2), nrow=2), step=10)
+  
+  plot(ex, xlab='x',ylab='y', main=paste("T=",temperature[k], "e=0.1, N=100, Step=10", sep=" "))
+  for(i in seq(0.02,1,0.2)){
+    mixtools::ellipse(mu=c(0,0),
+            sigma = sigma, alpha = i,npoints = 500,
+            draw = TRUE,newplot = FALSE, col="red",lwd=2) 
+  }
+}
+```
+
+
+```{r}
+library(mixtools)
+library(shape)
+iters = 40
+ex2=hybridMC(temp = 5, e=0.2, N=iters, mu=c(0,0), sigma = sigma, step = 5)
+plot(ex2, xlab="x1", ylab="x2", main = "Trajectoy of HMC Simulation")
+for (k in 1:(iters-1)) {
+  Arrows(ex2[k,1],ex2[k,2], ex2[k+1,1],ex2[k+1,2],lty =1,lwd=0.6)
+}
+for(i in seq(0.02,2,0.1)){
+    mixtools::ellipse(mu=c(0,0),
+            sigma = sigma, alpha = i,npoints = 500,
+            draw = TRUE,newplot = FALSE, col="red",lwd=1) 
+  }
+
+```
+
+```{r}
+par(mfrow=c(2,2))
+temperature = c(0.1,0.5,1,3)
+Step = c(1, 5, 10,20) 
+for (k in 1:4){
+  ex = hybridMC(temp=temperature[3],e=0.1, N=2000, mu=c(0,0), sigma=matrix(c(1,0.4,0.4,2), nrow=2), step=Step[k])
+  print(cov(ex))
+  plot(ex, xlab='x',ylab='y', main=paste("Temperature=1, e=0.1, N=2000, Step=", Step[k], sep=" "))
+  for(i in seq(0.02,0.5,0.2)){
+    mixtools::ellipse(mu=c(0,0),
+            sigma = sigma, alpha = i,npoints = 500,
+            draw = TRUE,newplot = FALSE, col="red",lwd=2) 
+  }
+}
+
+
+```
