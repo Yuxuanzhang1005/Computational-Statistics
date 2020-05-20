@@ -6,6 +6,14 @@ The section of STAT 525 covers advanced Monte Carlo methods and applications. To
 
 **Course content:** 
 * Homeworks: hw1-7
+  - Homework problems
+  - Report
+  - Code 
+  - Solution
 * Midterm I
 * Midterm II: cancelled
 * Final Project
+  - Topic: Hybrid Monte Carlo and Application 
+  - Report
+  - Code: Hybrid Monte Carlo & Metropolis-Hastings Algorithms
+
